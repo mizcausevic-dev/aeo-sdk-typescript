@@ -1,0 +1,43 @@
+{
+  "name": "@mizcausevic-dev/aeo-protocol",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the AEO Protocol v0.1 — parse, build, validate, and fetch AEO declaration documents.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["aeo", "answer-engine-optimization", "well-known", "llm", "json-ld", "zod"],
+  "author": "Miz Causevic",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mizcausevic-dev/aeo-sdk-typescript.git"
+  },
+  "homepage": "https://github.com/mizcausevic-dev/aeo-sdk-typescript",
+  "bugs": {
+    "url": "https://github.com/mizcausevic-dev/aeo-sdk-typescript/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}
