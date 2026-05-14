@@ -1,5 +1,9 @@
 # aeo-sdk-typescript
 
+[![npm](https://img.shields.io/npm/v/aeo-protocol.svg)](https://www.npmjs.com/package/aeo-protocol)
+[![npm downloads](https://img.shields.io/npm/dm/aeo-protocol.svg)](https://www.npmjs.com/package/aeo-protocol)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 TypeScript SDK for the [AEO Protocol v0.1](https://github.com/mizcausevic-dev/aeo-protocol-spec) — parse, build, validate, and fetch AEO declaration documents. Zero-runtime-cost types via [zod](https://github.com/colinhacks/zod).
 
 ## Install
