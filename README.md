@@ -5,13 +5,13 @@ TypeScript SDK for the [AEO Protocol v0.1](https://github.com/mizcausevic-dev/ae
 ## Install
 
 ```bash
-npm install @mizcausevic-dev/aeo-protocol
+npm install aeo-protocol
 ```
 
 ## Quickstart
 
 ```typescript
-import { fetchWellKnown, parseDocument, claimIds, findClaim } from "@mizcausevic-dev/aeo-protocol";
+import { fetchWellKnown, parseDocument, claimIds, findClaim } from "aeo-protocol";
 
 // Fetch and parse from a live well-known URL
 const doc = await fetchWellKnown("https://mizcausevic-dev.github.io");
@@ -23,7 +23,7 @@ console.log(findClaim(doc, "years-experience")?.value); // 30
 const docFromString = parseDocument('{"aeo_version":"0.1",...}');
 
 // Validate safely
-import { safeParseDocument } from "@mizcausevic-dev/aeo-protocol";
+import { safeParseDocument } from "aeo-protocol";
 const result = safeParseDocument(maybeMalformed);
 if (!result.success) console.error(result.error);
 ```
@@ -45,7 +45,7 @@ Supports the AEO Protocol at **conformance Level 1 (Declare)**. Signature verifi
 Every model has both a zod schema and an inferred type. Import either:
 
 ```typescript
-import { documentSchema, type AeoDocument } from "@mizcausevic-dev/aeo-protocol";
+import { documentSchema, type AeoDocument } from "aeo-protocol";
 
 const validated: AeoDocument = documentSchema.parse(someUnknown);
 ```
@@ -70,7 +70,7 @@ Full spec at [github.com/mizcausevic-dev/aeo-protocol-spec](https://github.com/m
 
 ## License
 
-AGPL-3.0.
+MIT-licensed. Free for commercial and non-commercial use with attribution. The AEO Protocol specification this SDK implements is also MIT (see [aeo-protocol-spec](https://github.com/mizcausevic-dev/aeo-protocol-spec)).
 
 ## Kinetic Gain Protocol Suite
 

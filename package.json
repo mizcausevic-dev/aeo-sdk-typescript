@@ -1,5 +1,5 @@
 {
-  "name": "@mizcausevic-dev/aeo-protocol",
+  "name": "aeo-protocol",
   "version": "0.1.0",
   "description": "TypeScript SDK for the AEO Protocol v0.1 — parse, build, validate, and fetch AEO declaration documents.",
   "type": "module",
@@ -20,7 +20,7 @@
   },
   "keywords": ["aeo", "answer-engine-optimization", "well-known", "llm", "json-ld", "zod"],
   "author": "Miz Causevic",
-  "license": "AGPL-3.0",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/mizcausevic-dev/aeo-sdk-typescript.git"
