@@ -65,7 +65,7 @@ export const claimSchema = z
   .object({
     id: z.string().regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/),
     predicate: z.string().min(1),
-    value: z.unknown(),
+    value: z.unknown().refine((value) => value !== undefined, "Claim value is required"),
     evidence: z.array(z.string().url()).optional(),
     valid_from: z.string().date().optional(),
     valid_until: z.union([z.string().date(), z.null()]).optional(),
@@ -100,7 +100,16 @@ export const auditSchema = z
     endpoint_uri: z.string().url().optional(),
     endpoint_schema: z.string().url().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((audit, ctx) => {
+    if (audit.mode === "signature" || audit.mode === "endpoint") {
+      if (!audit.signing_key_uri) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["signing_key_uri"], message: "Signing key URI is required" });
+      if (!audit.signature) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["signature"], message: "Signature is required" });
+    }
+    if (audit.mode === "endpoint" && !audit.endpoint_uri) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endpoint_uri"], message: "Endpoint URI is required" });
+    }
+  });
 export type Audit = z.infer<typeof auditSchema>;
 
 export const documentSchema = z
@@ -113,7 +122,14 @@ export const documentSchema = z
     answer_constraints: answerConstraintsSchema.optional(),
     audit: auditSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((doc, ctx) => {
+    const seen = new Set<string>();
+    doc.claims.forEach((claim, index) => {
+      if (seen.has(claim.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["claims", index, "id"], message: "Claim IDs must be unique" });
+      seen.add(claim.id);
+    });
+  });
 export type AeoDocument = z.infer<typeof documentSchema>;
 
 /** Parse a JSON string into an AeoDocument. Throws ZodError on invalid input. */
@@ -136,7 +152,7 @@ export function safeParseDocument(value: unknown) {
   return documentSchema.safeParse(value);
 }
 
-/** Serialize an AeoDocument to canonical JSON. */
+/** Serialize an AeoDocument to readable JSON (not a signing canonicalization). */
 export function serializeDocument(doc: AeoDocument, indent = 2): string {
   return JSON.stringify(doc, null, indent);
 }
