@@ -2,17 +2,16 @@
 
 All notable changes to this project are documented here.
 
-## [1.0.0] - 2026-05-12
+## [0.1.1] - Unreleased
 
-### Released
-- Shipped **aeo-sdk-typescript** as a public artifact for teams dealing with answer-engine visibility.
-- Packaged the current implementation, documentation, validation flow, and proof surfaces into a repo that can be reviewed by technical and operating stakeholders.
-- Clarified the core problem the project is addressing: weak semantic packaging, inconsistent structured data, and poor answer-system discoverability.
+### Fixed
+- Enforce HTTPS origin inputs, one same-origin redirect, response size limits, and abort cleanup in discovery fetches.
+- Reject missing claim values, duplicate claim IDs, and incomplete signature or endpoint audit blocks.
+- Clarify that JSON serialization is not a signing canonicalization.
 
-### Why this mattered
-- Existing approaches in SEO crawlers, analytics platforms, and schema validators were useful for parts of the workflow.
-- They still left out a review layer that connected technical content hygiene with answer readiness and citation potential.
-- This release made the repo read like an operational capability rather than a narrow technical demo.
+## Documentation refresh - 2026-05-12
+
+- Updated repository positioning and documentation. No 1.0.0 package release occurred.
 
 ## [0.1.0] - 2026-03-11
 

@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/aeo-protocol.svg)](https://www.npmjs.com/package/aeo-protocol)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-TypeScript SDK for the [AEO Protocol v0.1](https://github.com/mizcausevic-dev/aeo-protocol-spec) — parse, build, validate, and fetch AEO declaration documents. Zero-runtime-cost types via [zod](https://github.com/colinhacks/zod).
+TypeScript SDK for the [AEO Protocol v0.1](https://github.com/mizcausevic-dev/aeo-protocol-spec) — parse, build, validate, and fetch AEO declaration documents, with runtime validation and inferred types via [zod](https://github.com/colinhacks/zod).
 
 ## Install
 
@@ -36,13 +36,16 @@ if (!result.success) console.error(result.error);
 
 - **Parse** — `parseDocument(raw)` and `safeParseDocument(value)` for strict and recoverable parsing
 - **Build** — full zod schemas (`documentSchema`, `entitySchema`, etc.) and inferred TypeScript types (`AeoDocument`, `Entity`, `Claim`, ...)
-- **Serialize** — `serializeDocument(doc, indent)` returns canonical JSON
-- **Fetch** — `fetchWellKnown(origin, { timeoutMs })` discovers and parses against `/.well-known/aeo.json` with `Accept: application/aeo+json, application/json`
+- **Serialize** — `serializeDocument(doc, indent)` returns readable JSON; it is not a signing canonicalization
+- **Fetch** — `fetchWellKnown(origin, { timeoutMs, maxBytes, signal })` discovers and parses against `/.well-known/aeo.json` over HTTPS, allows one same-origin redirect, and limits response size to 1 MiB by default
+
+**Server-side security:** The SDK validates URL syntax and redirects, but native `fetch` resolves DNS without a public-address guard. If a service accepts untrusted origins, enforce an outbound allowlist or network egress policy that blocks private and link-local addresses. Do not use this helper alone as an SSRF boundary.
 - **Query** — `claimIds(doc)` and `findClaim(doc, id)` for convenience
 
 ## Conformance
 
 Supports the AEO Protocol at **conformance Level 1 (Declare)**. Signature verification (L2) and audit-endpoint posting (L3) deferred to v0.2.
+
 
 ## TypeScript types
 
@@ -67,6 +70,10 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+## Release gate
+
+Publishing is tag-triggered from a commit on `main`. The `publish.yml` workflow requires Node.js 22.14+ and npm 11.5.1+ and uses [npm Trusted Publisher OIDC](https://docs.npmjs.com/trusted-publishers/), with no npm token fallback. Before tagging a new package version, configure the npm package `aeo-protocol` to trust GitHub Actions for `mizcausevic-dev/aeo-sdk-typescript`, workflow filename `publish.yml`, with direct `npm publish` allowed. That npm-side connection and permission were not verified in this review; the workflow fails at publish if they are absent. Verify the packed files, candidate CI, and the published package and provenance for each release; a local build alone does not establish publication.
 
 ## Specification
 

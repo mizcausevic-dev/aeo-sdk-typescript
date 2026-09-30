@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   parseDocument,
@@ -10,7 +10,10 @@ import {
   claimIds,
   findClaim,
   wellKnownUrl,
+  fetchWellKnown,
 } from "../src/index.js";
+
+afterEach(() => vi.restoreAllMocks());
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = readFileSync(
@@ -31,6 +34,26 @@ describe("parseDocument", () => {
     const data = JSON.parse(FIXTURE) as Record<string, unknown>;
     data.unexpected_field = "should not parse";
     expect(() => parseDocument(JSON.stringify(data))).toThrow();
+  });
+
+  it("rejects claims without values or with duplicate IDs", () => {
+    const missingValue = JSON.parse(FIXTURE) as { claims: Array<Record<string, unknown>> };
+    delete missingValue.claims[0]!.value;
+    expect(() => parseDocument(JSON.stringify(missingValue))).toThrow();
+
+    const duplicate = JSON.parse(FIXTURE) as { claims: Array<Record<string, unknown>> };
+    duplicate.claims[1]!.id = duplicate.claims[0]!.id;
+    expect(() => parseDocument(JSON.stringify(duplicate))).toThrow();
+  });
+
+  it("rejects unsigned signature and endpoint audit modes", () => {
+    for (const mode of ["signature", "endpoint"]) {
+      const data = JSON.parse(FIXTURE) as Record<string, unknown>;
+      data.audit = mode === "endpoint"
+        ? { mode, endpoint_uri: "https://example.com/audit" }
+        : { mode };
+      expect(() => parseDocument(JSON.stringify(data))).toThrow();
+    }
   });
 });
 
@@ -100,5 +123,72 @@ describe("wellKnownUrl", () => {
     expect(wellKnownUrl("https://example.com////")).toBe(
       "https://example.com/.well-known/aeo.json",
     );
+  });
+
+  it("rejects non-origin and non-HTTPS inputs", () => {
+    for (const origin of [
+      "http://example.com",
+      "https://user:pass@example.com",
+      "https://example.com/path",
+      "https://example.com/?q=1",
+      "https://example.com/#fragment",
+      "file:///etc/passwd",
+    ]) {
+      expect(() => wellKnownUrl(origin)).toThrow();
+    }
+  });
+});
+
+describe("fetchWellKnown", () => {
+  it("parses a bounded HTTPS response", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(FIXTURE));
+    const doc = await fetchWellKnown("https://example.com");
+    expect(doc.entity.type).toBe("Person");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example.com/.well-known/aeo.json",
+      expect.objectContaining({ redirect: "manual" }),
+    );
+  });
+
+  it("allows one same-origin redirect", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, {
+        status: 302,
+        headers: { location: "/canonical.json" },
+      }))
+      .mockResolvedValueOnce(new Response(FIXTURE));
+    await fetchWellKnown("https://example.com");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("https://example.com/canonical.json");
+  });
+
+  it("refuses cross-origin and repeated redirects", async () => {
+    const redirect = new Response(null, {
+      status: 301,
+      headers: { location: "https://other.example/aeo.json" },
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(redirect);
+    await expect(fetchWellKnown("https://example.com")).rejects.toThrow("cross-origin");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    fetchMock.mockReset().mockResolvedValue(new Response(null, {
+      status: 302,
+      headers: { location: "/again" },
+    }));
+    await expect(fetchWellKnown("https://example.com")).rejects.toThrow("redirect limit");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses credentials introduced by a redirect", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, {
+      status: 302,
+      headers: { location: "https://user:pass@example.com/aeo.json" },
+    }));
+    await expect(fetchWellKnown("https://example.com")).rejects.toThrow("credentials refused");
+  });
+
+  it("rejects oversized responses", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(FIXTURE));
+    await expect(fetchWellKnown("https://example.com", { maxBytes: 16 }))
+      .rejects.toThrow("size limit");
   });
 });
