@@ -71,6 +71,10 @@ npm test
 npm run build
 ```
 
+## Release gate
+
+Publishing is tag-triggered from a commit on `main`. The `publish.yml` workflow requires Node.js 22.14+ and npm 11.5.1+ and uses [npm Trusted Publisher OIDC](https://docs.npmjs.com/trusted-publishers/), with no npm token fallback. Before tagging a new package version, configure the npm package `aeo-protocol` to trust GitHub Actions for `mizcausevic-dev/aeo-sdk-typescript`, workflow filename `publish.yml`, with direct `npm publish` allowed. That npm-side connection and permission were not verified in this review; the workflow fails at publish if they are absent. Verify the packed files, candidate CI, and the published package and provenance for each release; a local build alone does not establish publication.
+
 ## Specification
 
 Full spec at [github.com/mizcausevic-dev/aeo-protocol-spec](https://github.com/mizcausevic-dev/aeo-protocol-spec).

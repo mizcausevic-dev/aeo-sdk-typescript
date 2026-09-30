@@ -3,13 +3,10 @@ name: Publish to npm
 # Fires on a semver tag. Builds the dist/ output, verifies the package.json
 # version matches the tag, and publishes to npm.
 #
-# REQUIRED REPO SECRET: NPM_TOKEN
-#   - Create an npm Automation token at https://www.npmjs.com/settings/<user>/tokens
-#   - Add it as repo secret NPM_TOKEN under Settings → Secrets and variables → Actions
-#
-# If you prefer OIDC (no token) and have npm Trusted Publishing configured,
-# replace the publish step with `npm publish --provenance --access public` and
-# drop the NODE_AUTH_TOKEN env var.
+# Requires an npm Trusted Publisher connection for package aeo-protocol:
+# GitHub Actions, mizcausevic-dev/aeo-sdk-typescript, workflow publish.yml,
+# with direct npm publish allowed. There is no token fallback. Without that
+# package-side connection, npm publish fails rather than using a long-lived key.
 
 on:
   push:
@@ -18,18 +15,32 @@ on:
 
 permissions:
   contents: read
-  id-token: write   # for npm provenance attestation
+  id-token: write   # required for npm Trusted Publisher OIDC
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - run: npm ci
+          package-manager-cache: false
+      - name: Verify npm Trusted Publisher runtime
+        run: |
+          node -e 'const v=process.versions.node.split(".").map(Number); if (v[0] < 22 || (v[0] === 22 && v[1] < 14)) { console.error("Node 22.14+ required for npm OIDC"); process.exit(1); }'
+          node -e 'const v=process.argv[1].split(".").map(Number); if (v[0] < 11 || (v[0] === 11 && (v[1] < 5 || (v[1] === 5 && v[2] < 1)))) { console.error("npm 11.5.1+ required for npm OIDC"); process.exit(1); }' "$(npm --version)"
+      - name: Verify tag commit is on main
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main || {
+            echo "::error::Release tag must point to a commit on main"
+            exit 1
+          }
+      - run: npm ci --ignore-scripts
       - name: Verify tag matches package.json version
         run: |
           TAG="${GITHUB_REF_NAME#v}"
@@ -38,6 +49,7 @@ jobs:
             echo "::error::Git tag ($TAG) does not match package.json version ($PKG_VERSION)"
             exit 1
           fi
+          node -e 'const url=require("./package.json").repository?.url; if (url !== "https://github.com/mizcausevic-dev/aeo-sdk-typescript") { console.error("repository.url must match the GitHub OIDC repository"); process.exit(1); }'
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
@@ -45,7 +57,5 @@ jobs:
       - name: Verify package contents
         run: |
           npm pack --dry-run --json | node -e 'let json=""; process.stdin.on("data", chunk => json += chunk).on("end", () => { const files = JSON.parse(json)[0].files.map(file => file.path); if (!files.includes("dist/index.js") || !files.includes("dist/index.d.ts") || files.some(file => /^(src|tests)\/|(^|\/)\.env/.test(file))) { console.error("Unexpected npm package contents", files); process.exit(1); } console.log("Package files verified:", files.length); });'
-      - name: Publish to npm with provenance
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to npm with OIDC
+        run: npm publish --access public --ignore-scripts
